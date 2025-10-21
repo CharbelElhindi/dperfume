@@ -1,0 +1,18 @@
+/* Global base styles for the app */
+h1,h2,h3{font-family:'Playfair Display',serif;margin:0}
+button{cursor:pointer;border:none;padding:10px 18px;border-radius:8px;background:var(--gold);color:#111;font-weight:600}
+button:hover{opacity:0.95}
+
+/* small helper */
+.container{max-width:1100px;margin:0 auto}
+
+/* Perfume grid */
+.perfume-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:24px;
+  margin-top:28px;
+}
+
+/* Admin layout small tweaks */
+.admin-page .add-form{display:flex;flex-direction:column;gap:10px;max-width:480px;margin:20px auto}
