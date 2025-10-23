@@ -1,185 +1,572 @@
 import React, { useEffect, useState } from "react";
+import {
+  FaTrash,
+  FaEdit,
+  FaSignOutAlt,
+  FaEnvelope,
+  FaPlusCircle,
+} from "react-icons/fa";
 
 export default function Admin() {
+  const ADMIN_PASSWORD = "dperfume2025";
+
+  const [loggedIn, setLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
-  const [authorized, setAuthorized] = useState(false);
   const [perfumes, setPerfumes] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [tab, setTab] = useState("perfumes"); // perfumes | messages
+
   const [form, setForm] = useState({
     name: "",
+    brand: "",
     price: "",
+    size: "",
     description: "",
     image: "",
-    category: "",
-    size: "",
+    gender: "unisex", // ensure gender exists in the form state
   });
-  const adminPassword = "";
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
-    setPerfumes(JSON.parse(localStorage.getItem("perfumes") || "[]"));
-  }, []);
+    if (loggedIn) {
+      setLoading(true);
+      Promise.all([fetchPerfumes(), fetchMessages()]).finally(() =>
+        setLoading(false)
+      );
+    }
+  }, [loggedIn]);
 
-  function login(e) {
+  // ✅ Fetch perfumes
+  const fetchPerfumes = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/perfumes");
+      const data = await res.json();
+      setPerfumes(data);
+    } catch (err) {
+      console.error("Failed to fetch perfumes:", err);
+      setPerfumes([]);
+    }
+  };
+
+  // ✅ Fetch messages
+  const fetchMessages = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/contact");
+      const data = await res.json();
+      setMessages(data);
+    } catch (err) {
+      console.error("Failed to fetch messages:", err);
+      setMessages([]);
+    }
+  };
+
+  // ✅ Handle login
+  const handleLogin = (e) => {
     e.preventDefault();
-    if (password === adminPassword) setAuthorized(true);
-    else alert("Wrong password");
-  }
+    if (password === ADMIN_PASSWORD) {
+      setLoggedIn(true);
+      setPassword("");
+    } else alert("❌ Incorrect password");
+  };
 
-  function savePerfume(e) {
-    e.preventDefault();
-    const obj = { ...form, id: Date.now() };
-    const updated = [obj, ...perfumes];
-    setPerfumes(updated);
-    localStorage.setItem("perfumes", JSON.stringify(updated));
-    setForm({ name: "", price: "", description: "", image: "", category: "", size: "" });
-  }
+  const handleLogout = () => setLoggedIn(false);
 
-  function deletePerfume(id) {
-    if (!confirm("Delete this perfume?")) return;
-    const updated = perfumes.filter((p) => p.id !== id);
-    setPerfumes(updated);
-    localStorage.setItem("perfumes", JSON.stringify(updated));
-  }
-
-  function handleImageUpload(e) {
-    const f = e.target.files && e.target.files[0];
-    if (!f) return;
+  // ✅ Image upload (base64)
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
     const reader = new FileReader();
-    reader.onload = () => setForm((prev) => ({ ...prev, image: reader.result }));
-    reader.readAsDataURL(f);
-  }
+    reader.onloadend = () => {
+      setForm((prev) => ({ ...prev, image: reader.result }));
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
-  if (!authorized) {
+  // ✅ Add / Update perfume
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    const method = editingId ? "PUT" : "POST";
+    const url = editingId
+      ? `http://localhost:5000/api/perfumes/${editingId}`
+      : "http://localhost:5000/api/perfumes";
+
+    try {
+      await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      // reset form including gender
+      setForm({
+        name: "",
+        brand: "",
+        price: "",
+        size: "",
+        description: "",
+        image: "",
+        gender: "unisex",
+      });
+      setEditingId(null);
+      await fetchPerfumes();
+    } catch (err) {
+      console.error("Error saving perfume:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ✅ Delete perfume
+  const handleDeletePerfume = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this perfume?")) return;
+    try {
+      await fetch(`http://localhost:5000/api/perfumes/${id}`, { method: "DELETE" });
+      fetchPerfumes();
+    } catch (err) {
+      console.error("Failed to delete perfume:", err);
+    }
+  };
+
+  // ✅ Edit perfume
+  const handleEdit = (p) => {
+    // ensure gender is present (fallback to 'unisex' if missing)
+    setForm({
+      name: p.name || "",
+      brand: p.brand || "",
+      price: p.price || "",
+      size: p.size || "",
+      description: p.description || "",
+      image: p.image || "",
+      gender: p.gender || "unisex",
+    });
+    setEditingId(p._id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ✅ Delete message
+  const handleDeleteMessage = async (id) => {
+    if (!window.confirm("Delete this message?")) return;
+    try {
+      await fetch(`http://localhost:5000/api/contact/${id}`, { method: "DELETE" });
+      fetchMessages();
+    } catch (err) {
+      console.error("Failed to delete message:", err);
+    }
+  };
+
+  // ✅ Loading Spinner
+  const LoadingSpinner = () => (
+    <div style={{ textAlign: "center", marginTop: 100 }}>
+      <div
+        style={{
+          border: "4px solid #eee",
+          borderTop: "4px solid var(--gold)",
+          borderRadius: "50%",
+          width: 50,
+          height: 50,
+          margin: "auto",
+          animation: "spin 1s linear infinite",
+        }}
+      />
+      <p style={{ marginTop: 20, color: "#777" }}>Loading...</p>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+    </div>
+  );
+
+  // ======================
+  // 🔐 LOGIN SCREEN
+  // ======================
+  if (!loggedIn) {
     return (
-      <div className="container admin-login" style={{ maxWidth: 480, margin: "auto", marginTop: 50, padding: 24, background: "#fff", borderRadius: 12, boxShadow: "0 8px 25px rgba(0,0,0,0.1)" }}>
-        <h2 style={{ textAlign: "center", marginBottom: 20 }}>Admin Login</h2>
-        <form onSubmit={login} style={{ display: "grid", gap: 12 }}>
+      <div
+        style={{
+          maxWidth: 400,
+          margin: "120px auto",
+          background: "#fff",
+          borderRadius: 16,
+          boxShadow: "0 8px 25px rgba(0,0,0,0.1)",
+          padding: 32,
+          textAlign: "center",
+        }}
+      >
+        <h2 style={{ marginBottom: 20, color: "var(--gold)" }}>Admin Login</h2>
+        <form onSubmit={handleLogin}>
           <input
             type="password"
-            placeholder="Enter password"
+            placeholder="Enter admin password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{ padding: 12, borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}
+            style={{
+              width: "100%",
+              padding: 12,
+              borderRadius: 8,
+              border: "1px solid #ccc",
+              marginBottom: 12,
+            }}
           />
-          <button type="submit" style={{ padding: 12, borderRadius: 8, background: "#d4af37", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer" }}>
+          <button
+            type="submit"
+            style={{
+              width: "100%",
+              background: "var(--gold)",
+              color: "#000",
+              border: "none",
+              padding: 12,
+              borderRadius: 8,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
             Login
           </button>
         </form>
-        <div style={{ marginTop: 12, color: "var(--muted)", textAlign: "center", fontSize: 13 }}>
-           <strong>{adminPassword}</strong>
-        </div>
       </div>
     );
   }
 
+  if (loading) return <LoadingSpinner />;
+
+  // ======================
+  // 🧭 ADMIN DASHBOARD
+  // ======================
   return (
-    <div className="container admin-page" style={{ padding: "20px 40px" }}>
-      <h2 style={{ textAlign: "center", marginBottom: 30 }}>Admin Dashboard — Manage Perfumes</h2>
-
-      <form onSubmit={savePerfume} style={{ display: "grid", gap: 12, marginBottom: 40, padding: 20, background: "#fff", borderRadius: 12, boxShadow: "0 8px 25px rgba(0,0,0,0.05)" }}>
-        <input required placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}  style={{ padding: 12, borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }} />
-        <input placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}  style={{ padding: 12, borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}/>
-        <input placeholder="Price" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} style={{ padding: 12, borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }} />
-        <input placeholder="Size (e.g. 100ml)" value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })}  style={{ padding: 12, borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}/>
-        <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}  style={{ padding: 12, borderRadius: 8, border: "1px solid #ddd", fontSize: 14 }}/>
-       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-  <label
-    htmlFor="imageUpload"
-    style={{
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      cursor: "pointer",
-      padding: "10px 20px",
-      borderRadius: 8,
-      background: "#d4af37",
-      color: "#fff",
-      fontWeight: 600,
-      transition: "background 0.2s",
-      width: 200,
-      textAlign: "center",
-    }}
-    onMouseEnter={(e) => (e.currentTarget.style.background = "#d4af37")}
-    onMouseLeave={(e) => (e.currentTarget.style.background = "#d4af37")}
-  >
-    Upload Image
-  </label>
-  <input
-    id="imageUpload"
-    type="file"
-    accept="image/*"
-    onChange={handleImageUpload}
-    style={{ display: "none" }}
-  />
-  
-  {/* Image Preview */}
-  {form.image && (
-    <img
-      src={form.image}
-      alt="preview"
-      style={{
-        width: 120,
-        height: 120,
-        objectFit: "cover",
-        borderRadius: 12,
-        border: "2px solid #d4af37",
-        boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-      }}
-    />
-  )}
-</div>
-<div>
-          <input placeholder="Or paste image URL" value={form.image && form.image.startsWith("data:") ? "" : form.image} onChange={(e) => setForm({ ...form, image: e.target.value })}  style={{ padding: 12, borderRadius: 8, border: "1px solid #ddd", fontSize: 13 }}/>
-        </div>
-        <button type="submit" style={{ padding: 12, borderRadius: 8, background: "#d4af37", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer" }}>
-          Add Perfume
+    <div style={{ padding: "40px 20px", maxWidth: 1200, margin: "0 auto" }}>
+      {/* Header */}
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 30,
+        }}
+      >
+        <h2 style={{ color: "var(--gold)" }}>Admin Dashboard</h2>
+        <button
+          onClick={handleLogout}
+          style={{
+            background: "#222",
+            color: "#fff",
+            border: "none",
+            padding: "10px 16px",
+            borderRadius: 8,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <FaSignOutAlt /> Logout
         </button>
-      </form>
+      </header>
 
-      {/* Existing Perfumes */}
-      <h3 style={{ marginBottom: 12 }}>Existing Perfumes</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
-        {perfumes.length === 0 && <div style={{ padding: 20, background: "#fff", borderRadius: 12, textAlign: "center" }}>No perfumes yet.</div>}
-        {perfumes.map((p) => (
-          <div key={p.id} style={{ background: "#fff", borderRadius: 12, boxShadow: "0 6px 20px rgba(0,0,0,0.08)", overflow: "hidden", transition: "transform 0.2s" }} onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"} onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>
-            <img src={p.image || placeholder()} alt={p.name} style={{ width: "100%", height: 180, objectFit: "cover" }} />
-            <div style={{ padding: 12 }}>
-              <h4>{p.name}</h4>
-              <div style={{ color: "var(--muted)", fontSize: 13 }}>{p.category} • {p.size}</div>
-              <p style={{ margin: "8px 0" }}>{p.description}</p>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontWeight: 700 }}>${p.price}</div>
-                <button onClick={() => deletePerfume(p.id)} style={{ padding: "6px 12px", background: "#ff4d4f", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>Delete</button>
-              </div>
-            </div>
-          </div>
-        ))}
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+        <button
+          onClick={() => setTab("perfumes")}
+          style={{
+            background: tab === "perfumes" ? "var(--gold)" : "#eee",
+            border: "none",
+            padding: "10px 20px",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          Perfumes
+        </button>
+        <button
+          onClick={() => setTab("messages")}
+          style={{
+            background: tab === "messages" ? "var(--gold)" : "#eee",
+            border: "none",
+            padding: "10px 20px",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          Messages
+        </button>
       </div>
 
-      {/* Contact Inbox */}
-      <h3 style={{ marginTop: 40, marginBottom: 12 }}>Contact Inbox (local)</h3>
-      <Inbox />
-    </div>
-  );
-}
+      {/* ====================== */}
+      {/* PERFUMES SECTION */}
+      {/* ====================== */}
+      {tab === "perfumes" && (
+        <>
+          {/* Form */}
+          <section
+            style={{
+              background: "#fff",
+              padding: 25,
+              borderRadius: 12,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
+              marginBottom: 40,
+            }}
+          >
+            <h3 style={{ color: "#222", marginBottom: 20 }}>
+              {editingId ? "Edit Perfume" : "Add New Perfume"}
+            </h3>
 
-function placeholder() {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%' height='100%' fill='%23ffffff'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='16' fill='%23cccccc' font-family='Poppins, Arial'>No image</text></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
+            <form onSubmit={handleSubmit} style={{ display: "grid", gap: 10 }}>
+              <input
+                placeholder="Perfume Name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
+              <input
+                placeholder="Brand / Category"
+                value={form.brand}
+                onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                required
+              />
+              <input
+                type="number"
+                placeholder="Price"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                required
+              />
+              <input
+                placeholder="Size (e.g. 100ml)"
+                value={form.size}
+                onChange={(e) => setForm({ ...form, size: e.target.value })}
+              />
 
-function Inbox() {
-  const [messages, setMessages] = useState([]);
-  useEffect(() => setMessages(JSON.parse(localStorage.getItem("d_contacts") || "[]")), []);
-  return (
-    <div style={{ marginTop: 10, background: "#fff", padding: 16, borderRadius: 12, boxShadow: "0 6px 20px rgba(0,0,0,0.05)" }}>
-      {messages.length === 0 && <div style={{ color: "var(--muted)" }}>No messages yet.</div>}
-      {messages.map((m) => (
-        <div key={m.id} style={{ borderTop: "1px solid #f3f3f3", paddingTop: 8, marginTop: 8 }}>
-          <div style={{ fontWeight: 700 }}>{m.name} <span style={{ fontSize: 12, color: "var(--muted)" }}>• {m.email}</span></div>
-          <div style={{ marginTop: 6 }}>{m.message}</div>
-        </div>
-      ))}
+              {/* Gender select */}
+              <select
+                value={form.gender}
+                onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                style={{ padding: 10, borderRadius: 8 }}
+                required
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="unisex">Unisex</option>
+              </select>
+
+              <textarea
+                placeholder="Description"
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+                rows={3}
+              />
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <label
+                  style={{
+                    background: "var(--gold)",
+                    padding: "10px 16px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  {uploading ? "Uploading..." : "Upload Image"}
+                  <input
+                    type="file"
+                    onChange={handleImageUpload}
+                    accept="image/*"
+                    style={{ display: "none" }}
+                  />
+                </label>
+                <input
+                  placeholder="Or paste image URL"
+                  value={form.image}
+                  onChange={(e) => setForm({ ...form, image: e.target.value })}
+                  style={{ flex: 1 }}
+                />
+              </div>
+
+              {form.image && (
+                <img
+                  src={form.image}
+                  alt="Preview"
+                  style={{
+                    width: "100%",
+                    height: 200,
+                    objectFit: "cover",
+                    borderRadius: 8,
+                    marginTop: 8,
+                  }}
+                />
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  background: submitting ? "#bba55c" : "var(--gold)",
+                  border: "none",
+                  padding: 12,
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: submitting ? "not-allowed" : "pointer",
+                }}
+              >
+                {submitting
+                  ? editingId
+                    ? "Updating..."
+                    : "Adding..."
+                  : editingId
+                  ? "Update Perfume"
+                  : "Add Perfume"}
+              </button>
+            </form>
+          </section>
+
+          {/* Perfume list */}
+          <section>
+            <h3 style={{ marginBottom: 12, color: "#222" }}>Perfume Collection</h3>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                gap: 24,
+              }}
+            >
+              {perfumes.map((p) => (
+                <div
+                  key={p._id}
+                  style={{
+                    background: "#fff",
+                    borderRadius: 12,
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                    padding: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  <img
+                    src={p.image || "https://via.placeholder.com/150"}
+                    alt={p.name}
+                    style={{
+                      width: "100%",
+                      height: 180,
+                      objectFit: "cover",
+                      borderRadius: 10,
+                      marginBottom: 8,
+                    }}
+                  />
+                  <h4>{p.name}</h4>
+                  <p style={{ color: "#777" }}>{p.brand}</p>
+                  <p style={{ color: "#999" }}>Gender: {p.gender || "unisex"}</p>
+                  <p style={{ fontWeight: 600, color: "var(--gold)" }}>
+                    ${p.price}
+                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 10,
+                      marginTop: 10,
+                    }}
+                  >
+                    <button
+                      onClick={() => handleEdit(p)}
+                      style={{
+                        background: "#1b1b2f",
+                        color: "#fff",
+                        border: "none",
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <FaEdit /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeletePerfume(p._id)}
+                      style={{
+                        background: "#ff4d4f",
+                        color: "#fff",
+                        border: "none",
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <FaTrash /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* ====================== */}
+      {/* MESSAGES SECTION */}
+      {/* ====================== */}
+      {tab === "messages" && (
+        <section>
+          <h3 style={{ color: "#222", marginBottom: 10 }}>
+            Customer Messages <FaEnvelope style={{ marginLeft: 6 }} />
+          </h3>
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 20,
+              boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
+            }}
+          >
+            {messages.length === 0 ? (
+              <p style={{ color: "#777" }}>No messages yet.</p>
+            ) : (
+              messages.map((m) => (
+                <div
+                  key={m._id}
+                  style={{
+                    borderBottom: "1px solid #eee",
+                    padding: "10px 0",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div>
+                    <strong>{m.name}</strong> — <em>{m.email}</em>
+                    <p style={{ marginTop: 6 }}>{m.message}</p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteMessage(m._id)}
+                    style={{
+                      background: "#ff4d4f",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
