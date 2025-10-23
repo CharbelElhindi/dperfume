@@ -68,6 +68,16 @@ export default function Perfumes() {
     }
   }
 
+  async function fetchTestimonials() {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials`);
+      const data = await res.json();
+      setTestimonials(data || []);
+    } catch (err) {
+      console.error(err);
+      setTestimonials([]);
+    }
+  }
 
   function handleImgLoad(id) {
     setImageLoaded((prev) => ({ ...prev, [id]: true }));
