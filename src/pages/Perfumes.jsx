@@ -4,7 +4,6 @@ import { FaWhatsapp, FaHeart, FaRegHeart, FaMoon, FaSun, FaStar } from "react-ic
 
 function Stars({ value }) {
   const rounded = Math.round(value * 2) / 2;
-  const API_URL = "https://perfume-server.onrender.com";
 
   const arr = [1, 2, 3, 4, 5];
   return (
@@ -69,16 +68,6 @@ export default function Perfumes() {
     }
   }
 
-  async function fetchTestimonials() {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials`);
-      const data = await res.json();
-      setTestimonials(data || []);
-    } catch (err) {
-      console.error(err);
-      setTestimonials([]);
-    }
-  }
 
   function handleImgLoad(id) {
     setImageLoaded((prev) => ({ ...prev, [id]: true }));
