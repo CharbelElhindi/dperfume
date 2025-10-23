@@ -18,6 +18,8 @@ export default function Admin() {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [tab, setTab] = useState("perfumes"); // perfumes | messages
+  const API_URL = "https://perfume-server.onrender.com";
+
 
   const [form, setForm] = useState({
     name: "",
@@ -42,7 +44,7 @@ export default function Admin() {
   // ✅ Fetch perfumes
   const fetchPerfumes = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/perfumes");
+      const res = await fetch('${API_URL}/api/perfumes');
       const data = await res.json();
       setPerfumes(data);
     } catch (err) {
@@ -54,7 +56,7 @@ export default function Admin() {
   // ✅ Fetch messages
   const fetchMessages = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/contact");
+      const res = await fetch('${API_URL}/api/contact');
       const data = await res.json();
       setMessages(data);
     } catch (err) {
@@ -94,8 +96,8 @@ export default function Admin() {
 
     const method = editingId ? "PUT" : "POST";
     const url = editingId
-      ? `http://localhost:5000/api/perfumes/${editingId}`
-      : "http://localhost:5000/api/perfumes";
+      ? `h${API_URL}/api/perfumes/${editingId}`
+      : '${API_URL}/api/perfumes';
 
     try {
       await fetch(url, {
@@ -126,7 +128,7 @@ export default function Admin() {
   const handleDeletePerfume = async (id) => {
     if (!window.confirm("Are you sure you want to delete this perfume?")) return;
     try {
-      await fetch(`http://localhost:5000/api/perfumes/${id}`, { method: "DELETE" });
+      await fetch(`${API_URL}/api/perfumes/${id}`, { method: "DELETE" });
       fetchPerfumes();
     } catch (err) {
       console.error("Failed to delete perfume:", err);
@@ -153,7 +155,7 @@ export default function Admin() {
   const handleDeleteMessage = async (id) => {
     if (!window.confirm("Delete this message?")) return;
     try {
-      await fetch(`http://localhost:5000/api/contact/${id}`, { method: "DELETE" });
+      await fetch(`${API_URL}/api/contact/${id}`, { method: "DELETE" });
       fetchMessages();
     } catch (err) {
       console.error("Failed to delete message:", err);

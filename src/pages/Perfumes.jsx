@@ -4,6 +4,8 @@ import { FaWhatsapp, FaHeart, FaRegHeart, FaMoon, FaSun, FaStar } from "react-ic
 
 function Stars({ value }) {
   const rounded = Math.round(value * 2) / 2;
+  const API_URL = "https://perfume-server.onrender.com";
+
   const arr = [1, 2, 3, 4, 5];
   return (
     <div style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
@@ -56,7 +58,7 @@ export default function Perfumes() {
   async function fetchAll() {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/perfumes");
+      const res = await fetch('${API_URL}/api/perfumes');
       const data = await res.json();
       setPerfumes(data || []);
     } catch (err) {
@@ -69,7 +71,7 @@ export default function Perfumes() {
 
   async function fetchTestimonials() {
     try {
-      const res = await fetch("http://localhost:5000/api/testimonials");
+      const res = await fetch('${API_URL}/api/testimonials');
       const data = await res.json();
       setTestimonials(data || []);
     } catch (err) {
@@ -123,7 +125,7 @@ export default function Perfumes() {
 
   async function track(id, type) {
     try {
-      await fetch(`http://localhost:5000/api/perfumes/${id}/track`, {
+      await fetch(`${API_URL}/api/perfumes/${id}/track`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type }),
