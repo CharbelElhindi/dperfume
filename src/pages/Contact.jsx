@@ -3,7 +3,6 @@ import React, { useState } from "react";
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [status, setStatus] = useState("");
-  const API_URL = "https://perfume-server.onrender.com";
 
 
   const handleChange = (e) => {
@@ -14,7 +13,7 @@ export default function Contact() {
     e.preventDefault();
     setStatus("");
 
-    const res = await fetch('${API_URL}/api/contact', {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/contact`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
