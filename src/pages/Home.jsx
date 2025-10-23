@@ -37,7 +37,7 @@ export default function Home() {
             Welcome to <span style={{ color: "var(--gold,#d4af37)" }}>D Perfume</span>
           </h1>
           <p style={{ fontSize: "1.15rem", marginTop: 12 }}>
-            Discover elegance and luxury in every scent.
+            D
           </p>
           <Link
             to="/perfumes"
