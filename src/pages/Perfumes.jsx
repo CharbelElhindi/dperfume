@@ -57,7 +57,7 @@ export default function Perfumes() {
   async function fetchAll() {
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/perfumes`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/perfumes/`);
       const data = await res.json();
       setPerfumes(data || []);
     } catch (err) {
@@ -70,7 +70,7 @@ export default function Perfumes() {
 
   async function fetchTestimonials() {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/testimonials/`);
       const data = await res.json();
       setTestimonials(data || []);
     } catch (err) {
